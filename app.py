@@ -150,7 +150,8 @@ with st.sidebar:
     st.markdown("---")
     selected_model = st.selectbox(
         "Gemini LLM Model",
-        ["gemini-2.5-flash", "gemini-1.5-pro", "gemini-1.5-flash"],
+        [ "gemini-3.8-flash",
+        "gemini-3.1-pro-preview",],
         help="Selecteer het gewenste Gemini model. Flash modellen zijn geoptimaliseerd voor snelheid."
     )
 
@@ -267,7 +268,7 @@ if uploaded_file:
                             )
                         )
 
-                        answer = assistant.ask_with_context(
+                        answer, web_sources = assistant.ask_with_context(
                             user_query, 
                             context_text,
                             enable_serp=enable_serp

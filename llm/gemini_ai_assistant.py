@@ -126,6 +126,7 @@ class GeminiAssistant:
             raise RuntimeError(f"Kan geen antwoord genereren via Gemini API: {last_exception}")
 
         answer = response.text or ""
+        
         web_sources: List[str] = []
 
         # Extraheer grounding bronnen (SERP)
@@ -143,17 +144,18 @@ class GeminiAssistant:
                 web_sources = list(sources_set)
 
         return answer, web_sources
+    
 
     def ask_with_context(
         self, 
         query: str, 
         context: str, 
         enable_serp: bool = True
-    ) -> str:
+    ) -> tuple[str, list[str]]:
         '''
         Vereenvoudigde interface om een vraag te stellen met context.
          '''
         
         answer, sources = self.generate_response(query, context, enable_serp=enable_serp)
         
-        return answer
+        return answer, sources

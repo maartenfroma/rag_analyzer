@@ -1,5 +1,6 @@
 import os
 import sys
+import hashlib
 from pathlib import Path
 import streamlit as st
 from dotenv import load_dotenv
@@ -13,8 +14,8 @@ from llm.gemini_ai_assistant import GeminiAssistant
 # Laad omgevingsvariabelen (.env)
 load_dotenv()
 
-# ------------------------------------------------------------------------------
-# Pagina & Theme Instellingen
+#------------------------------------------------------------------------------
+# Pagina Instellingen & Custom Styling
 # ------------------------------------------------------------------------------
 st.set_page_config(
     page_title="PDF RAG Analyzer Pro",
@@ -23,88 +24,119 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Custom CSS injecteren voor de exacte professionele dark UI styling
+# Native Streamlit CSS Styling (Diepblauw Thema zonder JS DOM-injecties)
+# Native Streamlit CSS Styling (Professioneel Deep Blue & Slate Thema)
 st.markdown("""
 <style>
-    /* Google Fonts & Base Colors */
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
-    
-    html, body, [class*="css"] {
-        font-family: 'Inter', sans-serif;
+    /* Forceer de hoofdachtergrond naar een diepblauwe gradient */
+    .stApp, [data-testid="stAppViewContainer"], [data-testid="stHeader"] {
+        background: linear-gradient(135deg, #0a192f 0%, #0f172a 100%) !important;
+        color: #f8fafc !important;
     }
 
-    /* Achtergrond en hoofdkleuren */
-    .stApp {
-        background-color: #090d16;
-        color: #f8fafc;
+    /* Sidebar styling: Donkerder marineblauw met een strakke blauwe rand */
+    [data-testid="stSidebar"], [data-testid="stSidebarUserContent"] {
+        background-color: #0b1329 !important;
+        border-right: 1px solid rgba(59, 130, 246, 0.2) !important;
     }
-    
-    /* Sidebar styling */
-    [data-testid="stSidebar"] {
+
+    /* Alle Streamlit basisteksten, labels en titels wit/lichtgrijs maken */
+    .stMarkdown, p, h1, h2, h3, h4, h5, h6, label, [data-testid="stWidgetLabel"] p {
+        color: #f1f5f9 !important;
+    }
+
+    /* Inputs, Selectboxes en Sliders */
+    .stTextInput input, .stSelectbox > div > div, div[data-baseweb="select"] {
         background-color: #0f172a !important;
-        border-right: 1px solid #1e293b;
-    }
-
-    /* Dark Glassmorphism Cards */
-    .rag-card {
-        background-color: rgba(30, 41, 59, 0.6);
-        border: 1px solid rgba(255, 255, 255, 0.08);
-        border-radius: 12px;
-        padding: 16px;
-        margin-bottom: 12px;
-        backdrop-filter: blur(12px);
-    }
-    
-    .metric-box {
-        background: rgba(30, 41, 59, 0.4);
-        border: 1px solid rgba(255, 255, 255, 0.06);
-        border-radius: 10px;
-        padding: 12px;
-        text-align: center;
-    }
-
-    /* Custom Input & Textarea */
-    .stTextInput input, .stSelectbox select {
-        background-color: #090d16 !important;
-        color: #e2e8f0 !important;
-        border: 1px solid #334155 !important;
+        color: #f8fafc !important;
+        border: 1px solid rgba(59, 130, 246, 0.4) !important;
         border-radius: 8px !important;
     }
     
-    /* Badges & Pills */
+    /* Input focus state */
+    .stTextInput input:focus {
+        border-color: #3b82f6 !important;
+        box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.25) !important;
+    }
+
+    /* Professionele Gradient Knoppen met hover effect */
+    .stButton>button, .stFormSubmitButton>button {
+        background: linear-gradient(135deg, #1e40af 0%, #1d4ed8 100%) !important;
+        color: #ffffff !important;
+        border: 1px solid #3b82f6 !important;
+        border-radius: 8px !important;
+        font-weight: 600 !important;
+        padding: 0.5rem 1.5rem !important;
+        box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2) !important;
+        transition: all 0.2s ease !important;
+    }
+    
+    .stButton>button:hover {
+        background: linear-gradient(135deg, #1d4ed8 0%, #2563eb 100%) !important;
+        border-color: #60a5fa !important;
+        box-shadow: 0 4px 16px rgba(37, 99, 235, 0.4) !important;
+    }
+
+    /* Drag & Drop File Uploader styling */
+    [data-testid="stFileUploader"] section {
+        background-color: #0f172a !important;
+        border: 2px dashed rgba(59, 130, 246, 0.4) !important;
+        border-radius: 12px !important;
+    }
+
+    /* RAG Blokken / Cards */
+    .rag-card {
+        background: #1e293b !important;
+        border: 1px solid rgba(59, 130, 246, 0.3) !important;
+        border-radius: 12px !important;
+        padding: 18px !important;
+        margin-bottom: 14px !important;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25) !important;
+    }
+
+    /* Info Metric Boxen bovenin */
+    .metric-box {
+        background: #111827 !important;
+        border: 1px solid rgba(59, 130, 246, 0.3) !important;
+        border-radius: 10px !important;
+        padding: 14px !important;
+        text-align: center !important;
+        box-shadow: inset 0 0 10px rgba(59, 130, 246, 0.05) !important;
+    }
+
+    /* Badges & Labels */
     .badge-pdf {
-        background-color: rgba(99, 102, 241, 0.15);
-        color: #818cf8;
-        border: 1px solid rgba(99, 102, 241, 0.3);
-        padding: 3px 8px;
-        border-radius: 6px;
-        font-size: 11px;
-        font-weight: 500;
+        background-color: rgba(37, 99, 235, 0.2) !important;
+        color: #93c5fd !important;
+        border: 1px solid rgba(59, 130, 246, 0.5) !important;
+        padding: 4px 12px !important;
+        border-radius: 20px !important;
+        font-size: 11px !important;
+        font-weight: 600 !important;
     }
     
     .badge-serp {
-        background-color: rgba(14, 165, 233, 0.15);
-        color: #38bdf8;
-        border: 1px solid rgba(14, 165, 233, 0.3);
-        padding: 3px 8px;
-        border-radius: 6px;
-        font-size: 11px;
-        font-weight: 500;
+        background-color: rgba(14, 165, 233, 0.2) !important;
+        color: #38bdf8 !important;
+        border: 1px solid rgba(14, 165, 233, 0.5) !important;
+        padding: 4px 12px !important;
+        border-radius: 20px !important;
+        font-size: 11px !important;
+        font-weight: 600 !important;
     }
 
-    /* Bronnenweergave codeblokken */
+    /* Broncode / Snippets inspectie */
     .source-chunk {
-        background-color: #090d16;
-        border-left: 3px solid #6366f1;
-        padding: 10px;
-        border-radius: 6px;
-        font-family: 'JetBrains Mono', monospace;
-        font-size: 11px;
-        color: #cbd5e1;
-        margin-top: 6px;
+        background-color: #090d16 !important;
+        border-left: 4px solid #3b82f6 !important;
+        padding: 12px !important;
+        border-radius: 8px !important;
+        color: #cbd5e1 !important;
+        font-family: 'Fira Code', monospace !important;
     }
 </style>
 """, unsafe_allow_html=True)
+
 
 # ------------------------------------------------------------------------------
 # Sidebar - Instellingen & Parameters
@@ -112,22 +144,19 @@ st.markdown("""
 with st.sidebar:
     st.markdown("### ⚙️ Engine Parameters")
     
-    # Sleutel automatisch ophalen of via UI inschrijven
     env_key = os.getenv("GOOGLE_API_KEY") or ""
     api_key = st.text_input("Gemini API Key", value=env_key, type="password", help="Sleutel uit .env of handmatig invullen")
     
     st.markdown("---")
     selected_model = st.selectbox(
         "Gemini LLM Model",
-        ["models/gemini-2.5-flash", "models/gemini-1.5-pro", "models/gemini-1.5-flash"],
-        help="Select the desired Gemini model for " \
-        "response generation. Flash models are optimized for speed and cost."
+        ["gemini-2.5-flash", "gemini-1.5-pro", "gemini-1.5-flash"],
+        help="Selecteer het gewenste Gemini model. Flash modellen zijn geoptimaliseerd voor snelheid."
     )
 
-    #Input for pdf chunking and retrieval parameters
     st.markdown("---")
     st.markdown("**🔍 Vector & Retrieval Controls**")
-    chunk_size = st.slider("Chunk Size (text length)", 500, 3000, 1000, step=100)
+    chunk_size = st.slider("Chunk Size (tekstlengte)", 500, 3000, 1000, step=100)
     chunk_overlap = st.slider("Chunk Overlap (overlap)", 0, 500, 200, step=50)
     k_chunks = st.slider("Top-K Chunks Retrieval (k)", 1, 10, 4)
 
@@ -140,45 +169,32 @@ with st.sidebar:
 if "chat_history" not in st.session_state:
     st.session_state.chat_history = []
 
-import hashlib
-
 @st.cache_resource(show_spinner=False)
-def get_cached_vectorstore(file_name, file_size, file_bytes, key, c_size, c_overlap):
-    # Optionally, use a hash of the file for even more robust caching
-    file_hash = hashlib.md5(file_bytes).hexdigest()
+def get_cached_vectorstore(file_bytes, key, c_size, c_overlap):
+    """
+    Haalt een ge-cachete vectorstore op of bouwt deze op voor het geüploade PDF-bestand.
+    """
     return build_pdf_vectorstore(file_bytes, key, c_size, c_overlap)
 
 # ------------------------------------------------------------------------------
-# Header & Dashboard Title
+# Hoofdapplicatie Logic
 # ------------------------------------------------------------------------------
-st.markdown("""
-<div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px;">
-    <div>
-        <h1 style="margin: 0; font-size: 26px; font-weight: 700; background: linear-gradient(to right, #ffffff, #94a3b8); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
-            📚 PDF RAG Analyzer Pro
-        </h1>
-        <p style="margin: 4px 0 0 0; font-size: 13px; color: #64748b;">
-            Document AI Studio powered by FAISS Vector Indexing & Google Gemini
-        </p>
-    </div>
-</div>
-""", unsafe_allow_html=True)
+st.title("📚 PDF RAG Analyzer Pro")
 
-# ------------------------------------------------------------------------------
-# Main Layout: PDF Upload & Metrics
-# ------------------------------------------------------------------------------
-uploaded_file = st.file_uploader("Upload your PDF file", type=["pdf"])
+uploaded_file = st.file_uploader("Upload your PDF file to analyze", type=["pdf"])
 
 if uploaded_file:
     if not api_key:
         st.warning("⚠️ Please enter your Google API Key in the sidebar.")
     else:
+        file_bytes = uploaded_file.getvalue()
+        file_hash = hashlib.md5(file_bytes).hexdigest()
+
         with st.spinner('Scanning PDF and building FAISS vector store...'):
             try:
+                # Geef de raw file bytes door aan de cached loader
                 vectorstore, total_pages, total_chunks = get_cached_vectorstore(
-                    uploaded_file.name,
-                    uploaded_file.size,
-                    uploaded_file.getvalue(),
+                    file_bytes,
                     api_key,
                     chunk_size,
                     chunk_overlap
@@ -189,34 +205,36 @@ if uploaded_file:
                 with col1:
                     st.markdown(f"""
                     <div class="metric-box">
-                        <div style="font-size: 11px; color: #94a3b8;">Document</div>
-                        <div style="font-size: 13px; font-weight: 600; color: #f8fafc; overflow: hidden; text-overflow: ellipsis;">{uploaded_file.name}</div>
+                        <div style="font-size: 11px; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px;">Document</div>
+                        <div style="font-size: 13px; font-weight: 600; color: #f8fafc; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{uploaded_file.name}</div>
                     </div>
                     """, unsafe_allow_html=True)
                 with col2:
                     st.markdown(f"""
                     <div class="metric-box">
-                        <div style="font-size: 11px; color: #94a3b8;">Total Pages</div>
+                        <div style="font-size: 11px; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px;">Total Pages</div>
                         <div style="font-size: 14px; font-weight: 600; color: #38bdf8;">{total_pages} Pages</div>
                     </div>
                     """, unsafe_allow_html=True)
                 with col3:
                     st.markdown(f"""
                     <div class="metric-box">
-                        <div style="font-size: 11px; color: #94a3b8;">Vector Chunks</div>
+                        <div style="font-size: 11px; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px;">Vector Chunks</div>
                         <div style="font-size: 14px; font-weight: 600; color: #818cf8;">{total_chunks} Chunks</div>
                     </div>
                     """, unsafe_allow_html=True)
                 with col4:
                     st.markdown(f"""
                     <div class="metric-box">
-                        <div style="font-size: 11px; color: #94a3b8;">FAISS Status</div>
+                        <div style="font-size: 11px; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px;">FAISS Status</div>
                         <div style="font-size: 14px; font-weight: 600; color: #4ade80;">Ready (In-Memory)</div>
                     </div>
                     """, unsafe_allow_html=True)
                     
             except Exception as e:
+                import traceback
                 st.error(f"An error occurred while processing the PDF: {e}")
+                st.text(traceback.format_exc())
                 st.stop()
 
         st.markdown("<br>", unsafe_allow_html=True)
@@ -226,39 +244,39 @@ if uploaded_file:
         # ------------------------------------------------------------------------------
         chat_col, inspector_col = st.columns([1.8, 1.2])
 
+        # Linkerkolom: Chat sessie
         with chat_col:
             st.markdown("### 💬 Interactive Q&A Session")
             
-            # Formulier voor vraaginvoer
-
             with st.form("query_form", clear_on_submit=True):
                 user_query = st.text_input("Ask your question:", placeholder="E.g. What were the net revenues in 2025?")
-                submit_button = st.form_submit_button("Search & Generate Answer")
+                submit_button = st.form_submit_button("Search & Generate Answer ➔")
                 
                 if submit_button and user_query:
                     try:
-                        # 1. Similarity search in FAISS
                         docs = vectorstore.similarity_search(user_query, k=k_chunks)
-                        context_chunks = []
-                        for d in docs:
-                            page_num = d.metadata.get('page', 0) + 1
-                            context_chunks.append(f"--- Pagina {page_num} ---\n{d.page_content}")
+                        context_chunks = [d.page_content for d in docs]
                         context_text = "\n\n".join(context_chunks)
+
                         assistant = GeminiAssistant(
                             api_key=api_key,
                             model=selected_model,
-                            system_prompt='''You are a highly intelligent AI assistant 
-                            that provides accurate and concise answers based on the 
-                            provided context. If the answer is not in the context, 
-                            respond with I don't know.'''
+                            system_prompt=(
+                                "You are a highly intelligent AI assistant that provides accurate and concise answers "
+                                "based on the provided context. If the answer is not in the context, respond with I don't know."
+                            )
                         )
 
-                        # 3. Antwoord genereren (puur op basis van PDF context)
-                        answer, web_sources = assistant.generate_response(user_query, context_text)
+                        answer = assistant.ask_with_context(
+                            user_query, 
+                            context_text,
+                            enable_serp=enable_serp
+                        )
+                        
                         st.session_state.chat_history.append({
                             "query": user_query,
                             "answer": answer,
-                            "model": assistant.model,
+                            "model": selected_model,
                             "docs": docs,
                             "web_sources": web_sources if web_sources else []
                         })
@@ -269,44 +287,47 @@ if uploaded_file:
             for entry in reversed(st.session_state.chat_history):
                 st.markdown(f"""
                 <div class="rag-card">
-                    <div style="font-size: 12px; font-weight: 600; color: #818cf8; margin-bottom: 6px;">
+                    <div style="font-size: 13px; font-weight: 600; color: #818cf8; margin-bottom: 8px;">
                         ❓ Vraag: {entry['query']}
                     </div>
-                    <div style="font-size: 13px; color: #e2e8f0; line-height: 1.6; margin-bottom: 10px;">
+                    <div style="font-size: 13px; color: #e2e8f0; line-height: 1.6; margin-bottom: 12px;">
                         {entry['answer']}
                     </div>
-                    <div style="display: flex; gap: 8px; flex-wrap: wrap; border-top: 1px solid rgba(255,255,255,0.08); padding-top: 8px;">
+                    <div style="display: flex; gap: 8px; flex-wrap: wrap; border-top: 1px solid rgba(255,255,255,0.06); padding-top: 10px; align-items: center;">
                         <span class="badge-pdf">📄 PDF Context: {len(entry['docs'])} Chunks used</span>
                         {"<span class='badge-serp'>🌐 Live Web Grounded</span>" if entry['web_sources'] else ""}
                         <span style="font-size: 11px; color: #64748b; margin-left: auto;">Model: {entry['model']}</span>
                     </div>
                 </div>
                 """, unsafe_allow_html=True)
-    
-            # Rechterkolom: Context Inspector Cards
-            with inspector_col:
-                st.markdown("### 🔍 Context & Source Inspector")
+
+        # Rechterkolom: Context Inspector Cards
+        with inspector_col:
+            st.markdown("### 🔍 Context & Source Inspector")
+            
+            chunk_preview_length = 300
+            
+            if st.session_state.chat_history:
+                last_entry = st.session_state.chat_history[-1]
                 
-                if st.session_state.chat_history:
-                    last_entry = st.session_state.chat_history[-1]
-                    
-                    st.markdown(f"Last Query: *\"{last_entry['query']}\"*")
-                    
-                    for i, doc in enumerate(last_entry['docs']):
-                        page_num = doc.metadata.get('page', 0) + 1
-                        st.markdown(f"""
-                        <div style="background-color: #0f172a; border: 1px solid #1e293b; border-radius: 8px; padding: 10px; margin-bottom: 8px;">
-                            <div style="display: flex; justify-content: space-between; font-size: 11px; color: #818cf8; font-weight: 600; margin-bottom: 4px;">
-                                <span>Chunk #{i+1} (Pagina {page_num})</span>
-                            </div>
-                            <div class="source-chunk">
-                                {doc.page_content[:300]}...
-                            </div>
+                st.markdown(f"<div style='font-size:12px; color:#94a3b8; margin-bottom:10px;'>Last Query: <b style='color:#f8fafc;'>\"{last_entry['query']}\"</b></div>", unsafe_allow_html=True)
+                
+                for i, doc in enumerate(last_entry['docs']):
+                    page_num = doc.metadata.get('page', 0) + 1
+                    st.markdown(f"""
+                    <div style="background-color: #0b1120; border: 1px solid #1e293b; border-radius: 8px; padding: 12px; margin-bottom: 10px;">
+                        <div style="display: flex; justify-content: space-between; font-size: 11px; color: #818cf8; font-weight: 600; margin-bottom: 4px;">
+                            <span>Chunk #{i+1} (Pagina {page_num})</span>
                         </div>
-                        """, unsafe_allow_html=True)
-                    if last_entry.get('web_sources'):
-                        st.markdown("**🌐 Google SERP Search :**")
-                        for src in last_entry.get('web_sources', []):
-                            st.markdown(f"- {src}")
-                else:
-                    st.info("Ask a question to see the context and sources here.") 
+                        <div class="source-chunk">
+                            {doc.page_content[:chunk_preview_length]}...
+                        </div>
+                    </div>
+                    """, unsafe_allow_html=True)
+                
+                if last_entry.get('web_sources'):
+                    st.markdown("**🌐 Google SERP Search Sources:**")
+                    for src in last_entry.get('web_sources', []):
+                        st.markdown(f"- {src}")
+            else:
+                st.info("Ask a question to inspect the retrieved PDF chunks and external sources here.")

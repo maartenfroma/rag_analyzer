@@ -256,15 +256,23 @@ if uploaded_file:
                 if submit_button and user_query:
                     try:
                         docs = vectorstore.similarity_search(user_query, k=k_chunks)
+
+                        print("\n" + "=" * 80)
+                        print("RETRIEVED CHUNKS")
+                        print("=" * 80)
+
+                        for i, doc in enumerate(docs, start=1):
+                            print(f"\nCHUNK {i}")
+                            print(doc.page_content[:1000])
+
+                        print("=" * 80)
+                        
                         context_chunks = [d.page_content for d in docs]
                         context_text = "\n\n".join(context_chunks)
 
                         assistant = GeminiAssistant(
                             api_key=api_key,      
-                            system_prompt=(
-                                "You are a highly intelligent AI assistant that provides accurate and concise answers "
-                                "based on the provided context. If the answer is not in the context, respond with I don't know."
-                            )
+                           
                         )
 
                         answer, web_sources = assistant.ask_with_context(
@@ -283,24 +291,23 @@ if uploaded_file:
                     except Exception as e:
                         st.error(f"Error bij het genereren van het antwoord: {e}")
 
-            # Chat History Weergave
             for entry in reversed(st.session_state.chat_history):
-                st.markdown(f"""
-                <div class="rag-card">
-                    <div style="font-size: 13px; font-weight: 600; color: #818cf8; margin-bottom: 8px;">
-                        ❓ Vraag: {entry['query']}
+                 st.markdown(f"""
+                    <div class="rag-card">
+                        <div style="font-size: 13px; font-weight: 600; color: #818cf8; margin-bottom: 8px;">
+                            ❓ Vraag: {entry['query']}
+                        </div>
+                        <div style="font-size: 13px; color: #e2e8f0; line-height: 1.6; margin-bottom: 12px; white-space: pre-wrap;">
+                        {entry['answer'].replace('<', '<').replace('>', '>')}
+                        </div>
+                        <div style="display: flex; gap: 8px; flex-wrap: wrap; border-top: 1px solid rgba(255,255,255,0.06); padding-top: 10px; align-items: center;">
+                            <span class="badge-pdf">📄 PDF Context: {len(entry['docs'])} Chunks used</span>
+                            {"<span class='badge-serp'>🌐 Live Web Grounded</span>" if entry['web_sources'] else ""}
+                            <span style="font-size: 11px; color: #64748b; margin-left: auto;">Model: {entry['model']}</span>
+                        </div>
                     </div>
-                    <div style="font-size: 13px; color: #e2e8f0; line-height: 1.6; margin-bottom: 12px; white-space: pre-wrap;">
-                    {entry['answer'].replace('<', '&lt;').replace('>', '&gt;')}
-                    </div>
-                    <div style="display: flex; gap: 8px; flex-wrap: wrap; border-top: 1px solid rgba(255,255,255,0.06); padding-top: 10px; align-items: center;">
-                        <span class="badge-pdf">📄 PDF Context: {len(entry['docs'])} Chunks used</span>
-                        {"<span class='badge-serp'>🌐 Live Web Grounded</span>" if entry['web_sources'] else ""}
-                        <span style="font-size: 11px; color: #64748b; margin-left: auto;">Model: {entry['model']}</span>
-                    </div>
-                </div>
-                """, unsafe_allow_html=True)
-
+                    """, unsafe_allow_html=True)
+                 
         # Rechterkolom: Context Inspector Cards
         with inspector_col:
             st.markdown("### 🔍 Context & Source Inspector")

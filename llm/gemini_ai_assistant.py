@@ -37,7 +37,7 @@ class GeminiAssistant:
             "accurate and concise answers "
             "based on the provided context. "
             "If the answer is not directly available, provide a cautious analysis based on the available information and clearly indicate"
-             that it is an estimate."
+             "that it is an estimate."
                )
 
         self.model = self._select_model() 
@@ -96,6 +96,12 @@ class GeminiAssistant:
 
          Question:{query}
          Answer:"""
+
+        print("\n" + "=" * 80)
+        print("PROMPT NAAR GEMINI")
+        print("=" * 80)
+        print(full_prompt[:5000])
+        print("=" * 80 + "\n")
 
         # Configuratie opbouwen
         tools = [types.Tool(google_search=types.GoogleSearch())] if enable_serp else []

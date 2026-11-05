@@ -180,7 +180,7 @@ def get_cached_vectorstore(file_bytes, key, c_size, c_overlap):
 # ------------------------------------------------------------------------------
 # Hoofdapplicatie Logic
 # ------------------------------------------------------------------------------
-st.title("📚 PDF RAG Analyzer Pro")
+st.title("📚 PDF RAG Analyzer")
 
 uploaded_file = st.file_uploader("Upload your PDF file to analyze", type=["pdf"])
 
@@ -292,21 +292,29 @@ if uploaded_file:
                         st.error(f"Error bij het genereren van het antwoord: {e}")
 
             for entry in reversed(st.session_state.chat_history):
-                 st.markdown(f"""
-                    <div class="rag-card">
-                        <div style="font-size: 13px; font-weight: 600; color: #818cf8; margin-bottom: 8px;">
-                            ❓ Vraag: {entry['query']}
-                        </div>
-                        <div style="font-size: 13px; color: #e2e8f0; line-height: 1.6; margin-bottom: 12px; white-space: pre-wrap;">
-                        {entry['answer'].replace('<', '<').replace('>', '>')}
-                        </div>
-                        <div style="display: flex; gap: 8px; flex-wrap: wrap; border-top: 1px solid rgba(255,255,255,0.06); padding-top: 10px; align-items: center;">
-                            <span class="badge-pdf">📄 PDF Context: {len(entry['docs'])} Chunks used</span>
-                            {"<span class='badge-serp'>🌐 Live Web Grounded</span>" if entry['web_sources'] else ""}
-                            <span style="font-size: 11px; color: #64748b; margin-left: auto;">Model: {entry['model']}</span>
-                        </div>
+
+                st.markdown(f"""
+                <div class="rag-card">
+                    <div style="
+                        font-size:16px;
+                        font-weight:600;
+                        color:#818cf8;
+                        margin-bottom:12px;
+                    ">
+                        ❓ Vraag: {entry['query']}
                     </div>
-                    """, unsafe_allow_html=True)
+                </div>
+                """, unsafe_allow_html=True)
+
+                st.write(entry["answer"])
+
+                st.markdown(f"""
+                <div style="margin-bottom:20px;">
+                    <span class="badge-pdf">
+                        📄 PDF Context: {len(entry['docs'])} Chunks used
+                    </span>
+                </div>
+                """, unsafe_allow_html=True)
                  
         # Rechterkolom: Context Inspector Cards
         with inspector_col:
@@ -322,10 +330,7 @@ if uploaded_file:
                 for i, doc in enumerate(last_entry['docs']):
                     page_num = doc.metadata.get('page', 0) + 1
                     st.markdown(f"""
-                    <div style="background-color: #0b1120; border: 1px solid #1e293b; border-radius: 8px; padding: 12px; margin-bottom: 10px;">
-                        <div style="display: flex; justify-content: space-between; font-size: 11px; color: #818cf8; font-weight: 600; margin-bottom: 4px;">
-                            <span>Chunk #{i+1} (Pagina {page_num})</span>
-                        </div>
+                    
                         <div class="source-chunk">
                             {doc.page_content[:chunk_preview_length]}...
                         </div>

@@ -14,16 +14,14 @@ class GeminiAssistant:
     """
 
     MODELS_PREFERRED = [
-    "gemini-2.5-flash",
-    "gemini-2.5-pro",
-    "gemini-2.0-flash",
-    "gemini-1.5-flash",
-    "gemini-1.5-pro",
+    "gemini-3.8-flash",
+    "gemini-3.1-pro-preview",
         ]
+
+    
     def __init__(
         self,
         api_key: Optional[str] = None,
-        model: Optional[str] = None,
         system_prompt: Optional[str] = None,
     ):
         resolved_key = api_key or os.getenv("GOOGLE_API_KEY")
@@ -35,26 +33,34 @@ class GeminiAssistant:
 
         self.client = genai.Client(api_key=resolved_key)
         self.system_prompt = system_prompt or (
-            "You are a highly intelligent AI assistant that provides accurate and concise answers "
-            "based on the provided context. If the answer is not in the context, respond with 'I don't know'."
-        )
+            "You are a highly intelligent AI assistant that provides "
+            "accurate and concise answers "
+            "based on the provided context. "
+            "If the answer is not directly available, provide a cautious analysis based on the available information and clearly indicate"
+             that it is an estimate."
+               )
 
-        # Verwijder eventuele 'models/' prefix voor de nieuwe SDK
-        raw_model = model or self._select_model()
-        self.model = raw_model.replace("models/", "") if raw_model else "gemini-2.5-flash"
+        self.model = self._select_model() 
 
     def _select_model(self) -> str:
         """Selecteert het beste beschikbare model uit de API-lijst."""
         try:
             models_list = self.client.models.list()
-            available_models = {m.name.replace("models/", "") for m in models_list}
+
+            available_models={m.name.replace("models/", "") for m in models_list}
+
+            # Print beschikbare Gemini-modellen
+            for m in sorted(available_models):
+                if m.startswith("gemini-"):
+                    print(f"Beschikbaar model: {m }")       
 
             for preferred_model in self.MODELS_PREFERRED:
-                clean_pref = preferred_model.replace("models/", "")
-                if clean_pref in available_models:
-                    return clean_pref
+            
+                if preferred_model in available_models:
+                    return preferred_model
 
-            flash_models = [m for m in available_models if "flash" in m.lower()]
+            flash_models = sorted([m for m in available_models 
+                                   if "flash" in m.lower()], reverse=True)
             if flash_models:
                 return flash_models[0]
 
@@ -64,7 +70,7 @@ class GeminiAssistant:
         except Exception as e:
             print(f"Waarschuwing bij ophalen modellenlijst ({e}). Gebruikt standaardmodel.")
 
-        return "gemini-2.5-flash"
+        return "gemini-3.8-flash"
 
     def generate_response(
         self, 
@@ -102,7 +108,7 @@ class GeminiAssistant:
 
         # Stel fallbacks samen
         fallback_models = [self.model] + [
-            m.replace("models/", "") for m in self.MODELS_PREFERRED if m.replace("models/", "") != self.model
+            m for m in self.MODELS_PREFERRED if m != self.model
         ]
 
         response = None

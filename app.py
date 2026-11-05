@@ -191,7 +191,7 @@ if uploaded_file:
         file_bytes = uploaded_file.getvalue()
         file_hash = hashlib.md5(file_bytes).hexdigest()
 
-        with st.spinner('Scanning PDF and building FAISS vector store...'):
+        with st.spinner('Scanning PDF and building CHROMA vector store...'):
             try:
                 # Geef de raw file bytes door aan de cached loader
                 vectorstore, total_pages, total_chunks = get_cached_vectorstore(
@@ -227,7 +227,7 @@ if uploaded_file:
                 with col4:
                     st.markdown(f"""
                     <div class="metric-box">
-                        <div style="font-size: 11px; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px;">FAISS Status</div>
+                        <div style="font-size: 11px; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px;">CHROMA Status</div>
                         <div style="font-size: 14px; font-weight: 600; color: #4ade80;">Ready (In-Memory)</div>
                     </div>
                     """, unsafe_allow_html=True)
@@ -260,8 +260,7 @@ if uploaded_file:
                         context_text = "\n\n".join(context_chunks)
 
                         assistant = GeminiAssistant(
-                            api_key=api_key,
-                            model=selected_model,
+                            api_key=api_key,      
                             system_prompt=(
                                 "You are a highly intelligent AI assistant that provides accurate and concise answers "
                                 "based on the provided context. If the answer is not in the context, respond with I don't know."
@@ -291,8 +290,8 @@ if uploaded_file:
                     <div style="font-size: 13px; font-weight: 600; color: #818cf8; margin-bottom: 8px;">
                         ❓ Vraag: {entry['query']}
                     </div>
-                    <div style="font-size: 13px; color: #e2e8f0; line-height: 1.6; margin-bottom: 12px;">
-                        {entry['answer']}
+                    <div style="font-size: 13px; color: #e2e8f0; line-height: 1.6; margin-bottom: 12px; white-space: pre-wrap;">
+                    {entry['answer'].replace('<', '&lt;').replace('>', '&gt;')}
                     </div>
                     <div style="display: flex; gap: 8px; flex-wrap: wrap; border-top: 1px solid rgba(255,255,255,0.06); padding-top: 10px; align-items: center;">
                         <span class="badge-pdf">📄 PDF Context: {len(entry['docs'])} Chunks used</span>

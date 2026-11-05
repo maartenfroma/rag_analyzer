@@ -4,16 +4,16 @@ from typing import Tuple
 from langchain_community.document_loaders import PyMuPDFLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_google_genai import GoogleGenerativeAIEmbeddings
-from langchain_community.vectorstores import FAISS
+from langchain_chroma import Chroma
 
 def build_pdf_vectorstore(
     file_bytes: bytes,
     api_key: str,
     chunk_size: int = 1000,
     chunk_overlap: int = 200
-) -> Tuple[FAISS, int, int]:
+) -> Tuple[object, int, int]:
     """
-    Bouwt een FAISS vectorstore op uit PDF-bytes met een stabiel Google embedding-model.
+    Bouwt een Chroma vectorstore op uit PDF-bytes met een stabiel Google embedding-model.
     """
     # Zorg dat de API-sleutel correct in de omgeving staat voor onderliggende componenten
     os.environ["GOOGLE_API_KEY"] = api_key
@@ -45,7 +45,7 @@ def build_pdf_vectorstore(
         )
 
         # 4. Vectorstore opbouwen
-        vectorstore = FAISS.from_documents(docs, embeddings)
+        vectorstore = Chroma.from_documents(docs, embeddings)
         return vectorstore, len(documents), len(docs)
 
     except Exception as e:

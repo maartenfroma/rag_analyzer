@@ -18,7 +18,7 @@ load_dotenv()
 # Pagina Instellingen & Custom Styling
 # ------------------------------------------------------------------------------
 st.set_page_config(
-    page_title="PDF RAG Analyzer Pro",
+    page_title="PDF RAG Analyzer",
     page_icon="📚",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -182,7 +182,21 @@ def get_cached_vectorstore(file_bytes, key, c_size, c_overlap):
 # ------------------------------------------------------------------------------
 st.title("📚 PDF RAG Analyzer")
 
-uploaded_file = st.file_uploader("Upload your PDF file to analyze", type=["pdf"])
+st.info("""
+         🔍 AI-Powered Document Analysis
+
+            Upload a PDF document and ask questions in natural language.
+
+                The system searches the most relevant sections 
+                of the document before generating an answer, 
+                helping provide responses that are grounded in 
+                the actual contents of your PDF.
+                   """)
+
+uploaded_file = st.file_uploader(
+    "Upload your PDF file to analyze",
+    type=["pdf"]
+)
 
 if uploaded_file:
     if not api_key:

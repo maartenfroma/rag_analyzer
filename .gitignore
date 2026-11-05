@@ -1,11 +1,19 @@
-# Virtuele omgeving
-.venv/
-venv/
-
-# Geheime API sleutels
+# Secrets
 .env
 .streamlit/secrets.toml
 
-# Python cache & tijdelijke bestanden
+# Python
 __pycache__/
 *.pyc
+
+# Virtual env
+venv/
+.venv/
+
+# Chroma
+chroma/
+.chroma/
+
+# IDE
+.vscode/
+.idea/

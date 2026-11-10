@@ -145,9 +145,8 @@ with st.sidebar:
     st.markdown("### ⚙️ Engine Parameters")
     
     env_key = os.getenv("GOOGLE_API_KEY") or ""
-    api_key = st.text_input("Gemini API Key", value=env_key, type="password", help="Sleutel uit .env of handmatig invullen")
+    api_key = env_key
     
-    st.markdown("---")
     selected_model = st.selectbox(
         "Gemini LLM Model",
         [ "gemini-3.8-flash",
